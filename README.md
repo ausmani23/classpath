@@ -1,6 +1,4 @@
-# Code for 'Notes on Class', Adaner and Dave
-
-# /code folder
+# 'Notes on Class', Adaner and Dave
 
 + 01_sim.R 
 
