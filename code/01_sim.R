@@ -52,7 +52,7 @@ loopdf<-expand.grid(
 # (1) which causal pathways are in operation
 # (2) how important these pathways are relative to luck/other causes
 
-#incidrect path: race doesn't directly affect outcome, but class doe
+#incidrect path: race doesn't directly affect outcome, but class does
 tmp<-loopdf$beta_race_outcome==0 & 
   loopdf$beta_class_outcome==1 
 
