@@ -131,11 +131,15 @@ incomedf<-by(incomedf,incomedf$race,function(df) {
   df
 }) %>% rbind.fill %>% data.table
 
+incomedf$race<-factor(incomedf$race)
+tmpcolors<-c('blue','red')
+names(tmpcolors)<-levels(incomedf$race)
+
 #########################################################
 #########################################################
 
 #make a plot of the PDF
-ggplot(
+g.tmp<-ggplot(
   incomedf,
   aes(
     x=log(income),
@@ -146,7 +150,25 @@ ggplot(
   geom_density(
     size=2,
   ) +
-  theme_bw()
+  scale_color_manual(
+    name="",
+    values=tmpcolors
+  ) +
+  xlab("\nIncome (log)") +
+  ylab("Density\n") + 
+  theme_bw() +
+  theme(
+    legend.position='top',
+    legend.direction='horizontal'
+  )
+
+setwd(outputdir)
+ggsave(
+  "fig_pdfs.png",
+  plot=g.tmp,
+  width=8,
+  height=6
+)
 
 
 #########################################################
@@ -171,11 +193,6 @@ tmpdf<-by(incomedf,incomedf$race,function(tmpdf) {
   ) %>% data.table
   tmpdf[val==T]
 }) %>% rbind.fill
-
-
-incomedf$race<-factor(incomedf$race)
-tmpcolors<-c('blue','red')
-names(tmpcolors)<-levels(incomedf$race)
 
 g.tmp <- ggplot(
   incomedf,
@@ -214,7 +231,7 @@ g.tmp <- ggplot(
 
 setwd(outputdir)
 ggsave(
-  "fig_race_cdfs.png",
+  "fig_cdfs.png",
   plot=g.tmp,
   width=8,
   height=6
