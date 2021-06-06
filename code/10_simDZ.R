@@ -40,31 +40,31 @@ require(Rlab)
 # Variables for counterfactuals
 #----------------------
 p_black                           = 0.15 # proportion of black population
-ratio_median_black2white_worker   = 0.70 # race->outcome: racial differential within non-propertied class
-ratio_odds_capitalist_white2black = 4 # race->class: odds ratio of white vs. black in propertied class
+ratio_median_black2white_worker   = 0.70 # race->outcome: racial differential within working class
+ratio_odds_capitalist_white2black = 4 # race->class: odds ratio of white vs. black in capitalist class
 ratio_median_capitalist2worker    = 2 # class->outcome: capitalist to white-worker median
 
 # Fixed parameters
 #----------------------
 n                   = 10^3 # number of draws 
-p_capitalist        = 0.30 # proportion of propertied class locations
+p_capitalist        = 0.30 # proportion of capitalist class locations
 median_white_worker = 1000 # median income for workers
-mean2med_worker     = 1.1 # dispersion of nonproperty incomes (mean to median>0)
-mean2med_capitalist = 1.4 # dispersion property incomes (mean to median>0)
+med2mean_worker     = 0.70 # dispersion of worker incomes (median to mean < 1)
+med2mean_capitalist = 0.50 # dispersion capitalist incomes (median to mean < 1)
 
 #########################################################
 #########################################################
 
 # Derived parameters
 #----------------------
-# Log-normal (non-propertied)
+# Log-normal (workers)
 mu_white_worker = log( median_white_worker )
-mu_black_worker = log( median_white_worker * ratio_median_black2white_worker ) # scale parameter
-s_worker = sqrt(  2 * log(mean2med_worker) );
+mu_black_worker = log( median_white_worker * ratio_median_black2white_worker ) 
+s_worker = sqrt(  2 * log(1/med2mean_worker) ); # scale parameter
 
-# Log-normal (propertied)
+# Log-normal (capitalists)
 mu_capitalist = log( median_white_worker * ratio_median_capitalist2worker ) # > 0
-s_capitalist = sqrt(  2 * log(mean2med_capitalist) );
+s_capitalist = sqrt(  2 * log(1/med2mean_capitalist) ); # scale parameter
 
 # Proportions of capitalists
 p_property_black = p_capitalist / ( p_black + ratio_odds_capitalist_white2black*(1-p_black) )
