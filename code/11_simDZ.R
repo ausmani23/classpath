@@ -33,6 +33,7 @@ datadir<-file.path(
 
 #extra packs
 require(Rlab)
+require(scales)
 
 #########################################################
 #########################################################
@@ -169,7 +170,7 @@ names(tmpcolors)<-levels(incomedf$race)
 g.tmp<-ggplot(
   incomedf,
   aes(
-    x=log(income),
+    x=income,
     group=race,
     color=race
   )
@@ -181,7 +182,11 @@ g.tmp<-ggplot(
     name="",
     values=tmpcolors
   ) +
-  xlab("\nIncome (log)") +
+  scale_x_log10(
+    breaks = 10^(1:8),
+    labels = scales::comma
+  ) +
+  xlab("\nIncome") +
   ylab("Density\n") + 
   theme_bw() +
   theme(
@@ -224,14 +229,13 @@ tmpdf<-by(incomedf,incomedf$race,function(tmpdf) {
 g.tmp <- ggplot(
   incomedf,
   aes(
-    x=log(income),
+    x=income,
     y=income_q_race,
     color=race
   )
 ) +
-  geom_point(
-    size=2,
-    alpha=0.5
+  geom_line(
+    size=2
   ) +
   geom_point(
     data=tmpdf,
@@ -240,16 +244,25 @@ g.tmp <- ggplot(
   ) +
   geom_line(
     data=tmpdf,
-    linetype='dashed',
+    linetype='solid',
     color='black',
     size=0.5
   ) +
+  #this governs the tick marks
+  scale_x_log10(
+    breaks = 10^(1:8),
+    labels = scales::comma
+  ) +
+  ## this governs limits
+  # coord_cartesian(
+  #   xlim = c(10^3,10^7)
+  # ) +
   scale_color_manual(
     name="",
     values=tmpcolors
   ) +
   theme_bw() +
-  xlab("\nIncome (log)") +
+  xlab("\nIncome") +
   ylab("Within-Race Quantile\n") + 
   theme(
     legend.position='top',
