@@ -41,9 +41,9 @@ require(Rlab)
 #----------------------
 p_black                           = 0.15 # proportion of black population
 ratio_median_black2white_worker   = 0.94 # race->outcome: Med[worker income|black]  / Med[worker income|white]
-ratio_odds_capitalist_white2black = 4 # race->class: odds ratio P(capitalist|white) / P(capitalist|black)
-ratio_wages2totalincome           = 0.60 # class->outcome: wage share E[worker income]*n_workers/( total income )
-med2mean_worker                   = 0.70 # class->outcome: dispersion of wage income (0 < median/mean < 1)
+ratio_odds_capitalist_white2black = 30    # race->class: odds ratio P(capitalist|white) / P(capitalist|black)
+ratio_wages2totalincome           = 0.58 # class->outcome: wage share E[worker income]*n_workers/( total income )
+med2mean_worker                   = 0.65 # class->outcome: dispersion of wage income (0 < median/mean < 1)
 
 # Fixed parameters
 #----------------------
@@ -111,6 +111,7 @@ for ( k in 1:length(c_black) ) {
 } 
 
 #########################################################
+# STATS
 #########################################################
 
 quantile_black_white_50_50 = quantile(y_black, 0.50)/quantile(y_white, 0.50)
@@ -119,6 +120,23 @@ quantile_black_white_80_80 = quantile(y_black, 0.80)/quantile(y_white, 0.80)
 
 quantile_black_black_80_20 = quantile(y_black, 0.80)/quantile(y_black, 0.20)
 quantile_white_white_80_20 = quantile(y_white, 0.80)/quantile(y_white, 0.20)
+
+total_income = sum(y_white) + sum(y_black);
+
+total_worker = 0;
+for ( k in 1:length(c_white) ) {
+  if (c_white[k] == 0) {
+    total_worker = total_worker + y_white[k]; 
+  } 
+  }
+ 
+for ( k in 1:length(c_black) ) {
+  if (c_black[k] == 0) {
+    total_worker = total_worker + y_black[k];
+  } 
+}
+ 
+
 
 #########################################################
 #########################################################
@@ -246,9 +264,18 @@ ggsave(
   height=6
 )
 
+########################
+# Print
+########################
 
+print(quantile_black_white_20_20)
+print(quantile_black_white_50_50)
+print(quantile_black_white_80_80)
 
+print(quantile_black_black_80_20)
+print(quantile_white_white_80_20)
 
+print(total_worker/total_income)
 
 
 
