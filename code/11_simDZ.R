@@ -40,16 +40,16 @@ require(scales)
 
 # Variables for counterfactuals
 #----------------------
-p_black                           = 0.15 # proportion of black population
+p_black                           = 0.13 # proportion of black population
 ratio_median_black2white_worker   = 0.94 # race->outcome: Med[worker income|black]  / Med[worker income|white]
-ratio_odds_capitalist_white2black = 8    # race->class: odds ratio P(capitalist|white) / P(capitalist|black) = P(white|capitalist) / P(black|capitalist)
+ratio_odds_capitalist_white2black = 16    # race->class: odds ratio P(capitalist|white) / P(capitalist|black) = [P(white|capitalist) / P(black|capitalist)]*[P(black)/P(white)]
 ratio_wages2totalincome           = 0.58 # class->outcome: wage share E[worker income]*n_workers/( total income )
 med2mean_worker                   = 0.65 # class->outcome: dispersion of wage income (0 < median/mean < 1)
 
 # Fixed parameters
 #----------------------
 n                   = 10^5 # number of draws 
-p_capitalist        = 0.15 # proportion of capitalist class locations
+p_capitalist        = 0.10 # proportion of capitalist class locations
 median_white_worker = 36000 # median income for white workers
 med2mean_capitalist = 0.50 # dispersion capitalist incomes (0 < median/mean < 1)
 
@@ -58,7 +58,7 @@ med2mean_capitalist = 0.50 # dispersion capitalist incomes (0 < median/mean < 1)
 
 # Derived parameters
 #----------------------
-# Log-normal (workers)
+# Log-normal (workers|race)
 s_worker = sqrt(  2 * log(1/med2mean_worker) ); # scale parameter
 mu_white_worker = log( median_white_worker )
 mu_black_worker = log( median_white_worker * ratio_median_black2white_worker ) 
@@ -75,7 +75,7 @@ mean_worker       = mean_white_worker*(1-p_black) +  mean_black_worker*p_black #
 ratio_odds_capitalist = p_capitalist/(1-p_capitalist)
 mean_capitalist       = (1-ratio_wages2totalincome) * mean_worker /( (ratio_wages2totalincome) * ratio_odds_capitalist  )  #E[income | capitalist]
 
-# Log-normal (capitalists)
+# Log-normal (capitalists|race)
 s_capitalist = sqrt(  2 * log(1/med2mean_capitalist) ); # scale parameter
 mu_capitalist = log( mean_capitalist ) - s_capitalist^2/2 # > 0
 
@@ -115,9 +115,11 @@ for ( k in 1:length(c_black) ) {
 # STATS
 #########################################################
 
-quantile_black_white_50_50 = quantile(y_black, 0.50)/quantile(y_white, 0.50)
+quantile_black_white_10_10 = quantile(y_black, 0.10)/quantile(y_white, 0.10)
 quantile_black_white_20_20 = quantile(y_black, 0.20)/quantile(y_white, 0.20)
+quantile_black_white_50_50 = quantile(y_black, 0.50)/quantile(y_white, 0.50)
 quantile_black_white_80_80 = quantile(y_black, 0.80)/quantile(y_white, 0.80)
+quantile_black_white_90_90 = quantile(y_black, 0.90)/quantile(y_white, 0.90)
 
 quantile_black_black_80_20 = quantile(y_black, 0.80)/quantile(y_black, 0.20)
 quantile_white_white_80_20 = quantile(y_white, 0.80)/quantile(y_white, 0.20)
@@ -182,10 +184,7 @@ g.tmp<-ggplot(
     name="",
     values=tmpcolors
   ) +
-  scale_x_log10(
-    breaks = 10^(1:8),
-    labels = scales::comma
-  ) +
+  xlim(0, 60000) +
   xlab("\nIncome") +
   ylab("Density\n") + 
   theme_bw() +
@@ -281,10 +280,14 @@ ggsave(
 # Print
 ########################
 
+print('Inter-racial gaps:')
+print(quantile_black_white_10_10)
 print(quantile_black_white_20_20)
 print(quantile_black_white_50_50)
 print(quantile_black_white_80_80)
+print(quantile_black_white_90_90)
 
+print('Intra-racial:')
 print(quantile_black_black_80_20)
 print(quantile_white_white_80_20)
 
