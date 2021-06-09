@@ -42,15 +42,15 @@ require(scales)
 #----------------------
 p_black                           = 0.15 # proportion of black population
 ratio_median_black2white_worker   = 0.94 # race->outcome: Med[worker income|black]  / Med[worker income|white]
-ratio_odds_capitalist_white2black = 14    # race->class: odds ratio P(capitalist|white) / P(capitalist|black) = P(white|capitalist) / P(black|capitalist)
+ratio_odds_capitalist_white2black = 8    # race->class: odds ratio P(capitalist|white) / P(capitalist|black) = P(white|capitalist) / P(black|capitalist)
 ratio_wages2totalincome           = 0.58 # class->outcome: wage share E[worker income]*n_workers/( total income )
 med2mean_worker                   = 0.65 # class->outcome: dispersion of wage income (0 < median/mean < 1)
 
 # Fixed parameters
 #----------------------
-n                   = 10^4 # number of draws 
+n                   = 10^5 # number of draws 
 p_capitalist        = 0.15 # proportion of capitalist class locations
-median_white_worker = 60000 # median income for white workers
+median_white_worker = 36000 # median income for white workers
 med2mean_capitalist = 0.50 # dispersion capitalist incomes (0 < median/mean < 1)
 
 #########################################################
@@ -129,14 +129,14 @@ for ( k in 1:length(c_white) ) {
   if (c_white[k] == 0) {
     total_worker = total_worker + y_white[k]; 
   } 
-  }
- 
+}
+
 for ( k in 1:length(c_black) ) {
   if (c_black[k] == 0) {
     total_worker = total_worker + y_black[k];
   } 
 }
- 
+
 
 
 #########################################################
@@ -289,6 +289,5 @@ print(quantile_black_black_80_20)
 print(quantile_white_white_80_20)
 
 print(total_worker/total_income)
-
 
 
