@@ -64,8 +64,10 @@ mu_white_worker = log( median_white_worker )
 mu_black_worker = log( median_white_worker * ratio_median_black2white_worker ) 
 
 # Proportions of capitalists conditioned on race
-p_capitalist_cond_black = p_capitalist / ( p_black + ratio_odds_capitalist_white2black*(1-p_black) ) #p(capitalist|black)
-p_capitalist_cond_white = p_capitalist_cond_black * ratio_odds_capitalist_white2black #p(capitalist|white)
+p_capitalist_cond_black = p_capitalist / 
+  ( p_black + ratio_odds_capitalist_white2black*(1-p_black) ) #p(capitalist|black)
+p_capitalist_cond_white = p_capitalist_cond_black * 
+  ratio_odds_capitalist_white2black #p(capitalist|white)
 
 # Parameters linking wage share to capitalist mean income
 mean_white_worker = exp( mu_white_worker + s_worker^2/2 ) #E[income | worker, white]
@@ -73,7 +75,8 @@ mean_black_worker = exp( mu_black_worker + s_worker^2/2 ) #E[income | worker, bl
 mean_worker       = mean_white_worker*(1-p_black) +  mean_black_worker*p_black #E[income | worker]
 
 ratio_odds_capitalist = p_capitalist/(1-p_capitalist)
-mean_capitalist       = (1-ratio_wages2totalincome) * mean_worker /( (ratio_wages2totalincome) * ratio_odds_capitalist  )  #E[income | capitalist]
+mean_capitalist       = (1-ratio_wages2totalincome) * mean_worker /
+  ( (ratio_wages2totalincome) * ratio_odds_capitalist  )  #E[income | capitalist]
 
 # Log-normal (capitalists|race)
 s_capitalist = sqrt(  2 * log(1/med2mean_capitalist) ); # scale parameter
@@ -146,9 +149,19 @@ for ( k in 1:length(c_black) ) {
 
 #put these together in a dataframe
 incomedf<-rbind.fill(
-  data.frame(race='White',income=y_white),
-  data.frame(race='Black',income=y_black)
+  data.frame(race='White',income=y_white,capitalist=c_white),
+  data.frame(race='Black',income=y_black,capitalist=c_black)
 )
+
+
+tapply(
+  incomedf$income,
+  list(incomedf$capitalist,incomedf$race),
+  quantile,0.1
+)
+
+#########################################################
+#########################################################
 
 #add quantile in overall distribution of income
 tmpf<-ecdf(incomedf$income)
