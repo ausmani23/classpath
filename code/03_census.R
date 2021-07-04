@@ -216,7 +216,7 @@ thisdf<-merge(
 thisdf[ ageg_f%in%c(1,2,7) | empstat%in%c(0,3) , class_f := NA_integer_ ]
 #of w-age and not in the labor force or just unemployed
 thisdf[ ageg_f%in%c(3,4,5,6) & empstat%in%c(0,2,3), class_f := 1]
-#unskilled worker (bottom 2/3 of skilldistribution)
+#unskilled worker (bottom of skilldistribution)
 thisdf[ empstat==1 & classwkr==2 & skillclass%in%c(2,3,4), class_f :=2 ] 
 #skilled worker or self-employed
 thisdf[ empstat==1 & classwkr==2 & skillclass==1 , class_f:= 3]
@@ -503,10 +503,18 @@ tmpdf<-data.frame(
 mwage_w <- median(tmpdf$income[tmpdf$race==1])
 mwage_b <- median(tmpdf$income[tmpdf$race==2])
 
-#we need to transfer this much per capita from whites to blacks
-tmpdf$reparations_tax <- (mwage_w - mwage_b)/2
-tmpdf$reparations_tax[tmpdf$race==1] <- 
-  tmpdf$reparations_tax[tmpdf$race==1] * -1 
+#we need to close this gap
+mediangap <- mwage_w - mwage_b
+wbratio<-sum(tmpdf$race==1)/sum(tmpdf$race==2)
+#we take x/wbratio from whites to give x to blacks
+#x + x/wbratio = mediangap
+#solve for x
+
+reparations_gain <- (mediangap * wbratio)/(1 + wbratio)
+reparations_loss <- -1 * reparations_gain / wbratio
+
+tmpdf$reparations_tax[tmpdf$race==1] <- reparations_loss
+tmpdf$reparations_tax[tmpdf$race==2] <- reparations_gain
 
 #transfer the money 
 #(except, if you don't have very much, we will only take as much
