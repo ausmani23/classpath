@@ -153,7 +153,6 @@ incomedf<-rbind.fill(
   data.frame(race='Black',income=y_black,capitalist=c_black)
 )
 
-
 tapply(
   incomedf$income,
   list(incomedf$capitalist,incomedf$race),
