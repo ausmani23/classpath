@@ -1,9 +1,9 @@
-"race_f","class_f","medianincome","proportion_race"
-"Black","Capitalists",35950,2.11276269862488
-"Black","Professionals",60000,12.6363247359012
-"Black","Reserve Army",3500,18.9522280935746
-"Black","Working-Class",33000,66.2986844718994
-"White","Capitalists",66000,4.65354901158806
-"White","Professionals",80000,23.7547265193675
-"White","Reserve Army",8300,12.1339567464735
-"White","Working-Class",49000,59.457767722571
+"class_f","race_f","proportion_race","mean_income","median_income"
+"Capitalists","Black",2.11276269862488,62900.7697929354,35950
+"Capitalists","White",4.65354901158806,119976.32898154,66000
+"Professionals","Black",12.6363247359012,76286.5717349346,60000
+"Professionals","White",23.7547265193675,112858.778029088,80000
+"Reserve Army","Black",18.9522280935746,13143.8056821378,3500
+"Reserve Army","White",12.1339567464735,25293.2911793855,8300
+"Working-Class","Black",66.2986844718994,41843.3940832643,33000
+"Working-Class","White",59.457767722571,63432.6347254713,49000
