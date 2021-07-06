@@ -156,6 +156,20 @@ sumdf<-tmpdf[
   )
 ]
 
+sumdf<-gather(
+  sumdf,
+  scenario,
+  welfare,
+  welfare_redistribution:welfare_comparison
+)
+sumdf$scenario<-str_replace(sumdf$scenario,"welfare\\_","")
+
+sumdf$scenario <- factor(
+  sumdf$scenario,
+  levels=c('reparations','redistribution','comparison'),
+  labels=c('Reparations','Redistribution','Net Comparison')
+)
+
 sumdf$race<-factor(
   sumdf$race,
   levels=c(1,2),
@@ -170,7 +184,7 @@ g.tmp<-ggplot(
   sumdf,
   aes(
     x=income_q_race,
-    y=welfare_comparison,
+    y=welfare,
     color=race,
     group=race
   )
@@ -188,6 +202,10 @@ g.tmp<-ggplot(
   ) +
   xlab("\nWithin-Race Income Rank (Percentile)") +
   ylab("Welfare Gain (Reparations) - Weflare Gain (Redistribution)\n") +
+  facet_wrap(
+    ~ scenario,
+    ncol=1
+  )
   theme_bw() + 
   theme(
     legend.position = 'top',
@@ -199,7 +217,7 @@ ggsave(
   plot=g.tmp,
   filename="fig_welfarecomparison.png",
   width=8,
-  height=6
+  height=12
 )
 
 #########################################################
