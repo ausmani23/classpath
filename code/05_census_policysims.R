@@ -190,7 +190,7 @@ g.tmp<-ggplot(
   )
 ) +
   geom_line(
-    size=2
+    size=1
   ) +
   geom_hline(
     yintercept=0,
@@ -201,11 +201,11 @@ g.tmp<-ggplot(
     values=tmpcolors
   ) +
   xlab("\nWithin-Race Income Rank (Percentile)") +
-  ylab("Welfare Gain (Reparations) - Weflare Gain (Redistribution)\n") +
+  ylab("Welfare Gain (+ implies support, - implies oppose)\n") +
   facet_wrap(
     ~ scenario,
     ncol=1
-  )
+  ) + 
   theme_bw() + 
   theme(
     legend.position = 'top',
@@ -216,8 +216,8 @@ setwd(outputdir)
 ggsave(
   plot=g.tmp,
   filename="fig_welfarecomparison.png",
-  width=8,
-  height=12
+  width=5,
+  height=10
 )
 
 #########################################################
