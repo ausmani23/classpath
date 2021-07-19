@@ -22,6 +22,10 @@ p_black       = 0.15 # proportion of black population
 p_class_black = np.array([18.95, 66.30, 12.63, 2.11])/100
 p_class_white = np.array([12.13, 59.46, 23.75, 4.65])/100
 
+#eliminate race->class
+#p_class_black = p_class_white
+
+
 p_class_black = p_class_black / np.sum(p_class_black )
 p_class_white = p_class_white / np.sum(p_class_white )
 
@@ -34,12 +38,23 @@ y_class_white_median = np.array([8300, 49000, 80000, 66000])
 y_class_black_mean = np.array([13144, 41843, 76287, 62900])
 y_class_white_mean = np.array([25293, 63433, 112858, 119976])
 
+#eliminate race->outcome
+#y_class_black_median = y_class_white_median 
+#y_class_black_mean   = y_class_white_mean
+
+#eliminate class->outcome
+y_class_black_median = np.array([27623, 27623, 27623, 27623])
+y_class_white_median = np.array([48518, 48518, 48518, 48518])
+y_class_black_mean   = 1.29455102*y_class_black_median
+y_class_white_mean   = 1.29455102*y_class_white_median
+
+
 
 # Fixed parameters
 #----------------------
-n                   = int(1e5) # number of draws
+n       = int(1e7) # number of draws
 n_black = int( round(p_black * n) )
-n_white= n - n_black
+n_white = n - n_black
 
 
 mu_class_black = np.log( y_class_black_median )
@@ -113,7 +128,7 @@ _ = plt.plot(x_cdf_black, y_cdf_black*100, linestyle='-', lw = 2,label="black")
 _ = plt.xlabel('Income less than [$]', size = 14)
 _ = plt.ylabel('Proportion [%]', size = 14)
 
-plt.xlim([y_class_white_median[1]/10, 5*y_class_white_median[1]])
+plt.xlim([y_class_white_median[1]/10, 10*y_class_white_median[1]])
 #plt.xscale('log')
 
 
