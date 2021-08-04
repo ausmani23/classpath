@@ -57,7 +57,16 @@ ratio_median2mean_class_white = np.divide(y_class_white_median,y_class_white_mea
 # y_class_white_mean[3] = ratio_mean2median_capitalist * y_class_white_median[3] 
 
 
-#"Marginalized" class parameters
+#"Marginalized" race variables
+#----------------------
+y_black_mean                  = 0
+y_white_mean                  = 0
+for k in range(N_classes):
+    y_black_mean              = y_black_mean + y_class_black_mean[k]*p_class_black[k]
+    y_white_mean              = y_white_mean + y_class_white_mean[k]*p_class_white[k]
+
+
+#"Marginalized" class variables
 #----------------------
 ratio_median2mean_class = np.empty((N_classes,1)) #pseudo-marginalized ratios
 y_class_mean            = np.empty((N_classes,1))
@@ -88,8 +97,8 @@ for k in range(N_classes):
 
 # Reduce class->outcome (parameterized)
 #alpha                = 0 #class convergence: fraction between 0 and 1
-#y_class_black_mean   = alpha*y_black + (1-alpha)*y_class_black
-#y_class_white_mean   = alpha*y_white + (1-alpha)*y_class_white
+#y_class_black_mean   = alpha*y_black_mean + (1-alpha)*y_class_black
+#y_class_white_mean   = alpha*y_white_mean + (1-alpha)*y_class_white
 
 #y_class_black_median = numpy.multiply(y_class_black_mean, alpha*max(ratio_median2mean_class) + (1-alpha)*ratio_median2mean_class_black)
 #y_class_black_median = numpy.multiply(y_class_white_mean, alpha*max(ratio_median2mean_class) + (1-alpha)*ratio_median2mean_class_white)
