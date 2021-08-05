@@ -40,6 +40,37 @@ simdf<-fread(
 #########################################################
 #########################################################
 
+#gini's are not realistic
+require(DescTools)
+simdf[
+  ,
+  .(gini = Gini(income))
+  ,
+  by=c(
+    'scenario'
+  )
+]
+
+# #truncate top and bottom incomes?
+# sum(simdf$income>10^6)/nrow(simdf) #3% of people
+# simdf$income[simdf$income>10^6]<-10^6
+# sum(simdf$income<10^3)/nrow(simdf) #also 3% of people
+# simdf$income[simdf$income/10^3]<-10^3
+
+#we can reduce it a little.. 
+simdf[
+  ,
+  .(gini = Gini(income))
+  ,
+  by=c(
+    'scenario'
+  )
+]
+
+#########################################################
+#########################################################
+
+#MAKE A RACE x CLASS PLOT
 
 #summarize the sim data
 tmpseq<-c(1:10000)/10000
@@ -54,18 +85,14 @@ sumdf <- simdf[
 ]
 
 #spread scenarios
-sumdf <- spread(
+plotdf <- spread(
   sumdf,
   scenario,
   income
 )
 
 #calculate welfare cgain
-
-sumdf$welfare_gain <- log(sumdf$both_off) - log(sumdf$class_off)
-
-
-plotdf <- sumdf
+plotdf$welfare_gain <- log(plotdf$both_off) - log(plotdf$class_off)
 
 plotdf$class <- factor(
   plotdf$class,
@@ -112,10 +139,98 @@ g.tmp <- ggplot(
     ~ class
   ) +
   ylab(
-    'Welfare Gain (Race Paths Off vs. Class Path Off)\n'
+    'Welfare(Race-Based Strategy) - Welfare(Class-Based Strategy)\n'
   ) +
   xlab(
     '\nWithin-Race, Within-Class Income Percentile'
+  ) +
+  theme_bw() 
+
+setwd(outputdir)
+ggsave(
+  plot=g.tmp, 
+  filename="fig_4class_counterfactual_byclass.png",
+  width=8,
+  height=6
+)
+
+#########################################################
+#########################################################
+
+#MAKE A SINGLE PLOT FOR RACE
+
+
+#summarize the sim data
+tmpseq<-c(1:10000)/10000
+sumdf <- simdf[
+  ,
+  .(
+    income = quantile(income,tmpseq) %>% unname,
+    income_q = 100 * tmpseq
+  )
+  ,
+  by=c('race','scenario')
+]
+
+#spread scenarios
+plotdf <- spread(
+  sumdf,
+  scenario,
+  income
+)
+
+#calculate welfare cgain
+plotdf$welfare_gain <- log(plotdf$both_off) - log(plotdf$class_off)
+
+# plotdf$class <- factor(
+#   plotdf$class,
+#   levels=c(1,2,3,4),
+#   labels=c(
+#     'Reserve Army',
+#     'Working-Class',
+#     'Professionals',
+#     'Capitalists'
+#   )
+# )
+
+plotdf$race<-factor(
+  plotdf$race,
+  levels=c('Black','White')
+)
+tmpcolors<-c(
+  'White'='Red',
+  'Black'='Blue'
+)
+
+
+g.tmp <- ggplot(
+  plotdf,
+  aes(
+    x=income_q,
+    y=welfare_gain,
+    group=race,
+    color=race
+  )
+) + 
+  geom_line(
+    size=1
+  ) +
+  geom_hline(
+    yintercept=0,
+    linetype='dashed'
+  ) +
+  scale_color_manual(
+    name="",
+    values=tmpcolors
+  ) +
+  # facet_wrap(
+  #   ~ class
+  # ) +
+  ylab(
+    'Welfare Gain (Race Paths Off vs. Class Path Off)\n'
+  ) +
+  xlab(
+    '\nWithin-Race Income Percentile'
   ) +
   theme_bw() 
 
@@ -126,3 +241,57 @@ ggsave(
   width=8,
   height=6
 )
+
+#another way of representing this
+
+plotdf<-sumdf[scenario%in%c('normal','both_off','class_off')]
+
+plotdf$race<-factor(
+  plotdf$race,
+  levels=c('Black','White')
+)
+
+plotdf$scenario<-factor(
+  plotdf$scenario,
+  levels=c('normal','both_off','class_off'),
+  labels=c('Baseline','Race-Based Counterfactual','Class-Based Counterfactual')
+)
+tmpcolors<-c(
+  'Baseline' = 'Black',
+  'Race-Based Counterfactual'='Blue',
+  'Class-Based Counterfactual'='Red'
+)
+
+g.tmp<- ggplot(
+  plotdf,
+  aes(
+    x=income_q,
+    y=log(income),
+    color=scenario
+  )
+) +
+  geom_line() +
+  scale_color_manual(
+    name="",
+    values=tmpcolors
+  ) +
+  ylab(
+    'Income (Log)\n'
+  ) +
+  xlab(
+    '\nWithin-Race Income Percentile'
+  ) +
+  facet_wrap(
+    ~ race
+  ) +
+  theme_bw() 
+
+
+setwd(outputdir)
+ggsave(
+  plot=g.tmp, 
+  filename="fig_4class_counterfactual_incomes.png",
+  width=8,
+  height=6
+)
+

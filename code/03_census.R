@@ -156,6 +156,7 @@ thisdf[ hispan != 0, race_f := 3] #hispanics
 #income
 thisdf[ inctot==9999999 , inctot := NA]
 thisdf[ incwage==9999999, incwage := NA]
+thisdf[ incbus00==9999999, incbus00 :=NA]
 #bottom-code..
 thisdf[, inctot_f := inctot]
 thisdf[, incwage_f := incwage]
@@ -234,12 +235,27 @@ tmptable<-questionr::wtd.table(
 #30% professionals/self-employed
 #4% capitalists
 
+
+# natincome<-weighted.mean(thisdf$inctot/1000,thisdf$perwt)
+# capincome<-weighted.mean(thisdf$incbus00/1000,thisdf$perwt)
+# wageincome<-weighted.mean(thisdf$incwage/1000,thisdf$perwt)
+# 
+# capincome/natincome
+# wageincome/natincome
+
 #subset to working-age men
 incomedf <-  thisdf[
   ageg_f%in%c(3,4,5,6) & 
     race_f%in%c(1,2) & 
     sex_f==1,
 ]
+
+#weighted race table
+tmptable<-questionr::wtd.table(
+  incomedf$race_f,
+  weights=incomedf$perwt
+)
+100 * tmptable/sum(tmptable)
 
 #########################################################
 #########################################################

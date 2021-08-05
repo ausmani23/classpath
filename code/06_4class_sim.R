@@ -47,46 +47,86 @@ scenarios = c(
   'class_off'
 )
 
+### DATA
+#these parameters are set from without
+#(mostly given by census data)
+
+p_black = 0.15 # proportion of black population
+p_white = 1 - p_black
+
+p_class_black = c(18.95, 66.30, 12.63, 2.11)/100
+p_class_white = c(12.13, 59.46, 23.75, 4.65)/100
+
+#marginalized probabilities
+p_class = (p_class_black * p_black) + (p_class_white * p_white)
+
+#median income, by race and class
+y_class_black_median = c(3500, 33000, 60000, 35950)
+y_class_white_median = c(8300, 49000, 80000, 66000)
+
+#mean income, by race and class
+y_class_black_mean = c(13144, 41843, 76287, 62900)
+y_class_white_mean = c(25293, 63433, 112858, 119976)
+
+ratio_median2mean_class_black = y_class_black_median/y_class_black_mean
+ratio_median2mean_class_white = y_class_white_median/y_class_white_mean
+
+#marginalized race variables
+y_black_mean = sum(y_class_black_mean * p_class_black)
+y_white_mean = sum(y_class_white_mean * p_class_white)
+
+#marignalized class variables
+y_class_mean = y_class_black_mean * p_black + y_class_white_mean * p_white
+y_mean = sum(y_class_mean * p_class)
+ratio_median2mean_class = ratio_median2mean_class_black*p_black + ratio_median2mean_class_white*p_white
+
+#class-convergence parameter, ranges 0-1
+#when 0, class distributions do not converge at all
+#when 1, classes converge fully
+#we set this parameter to create some kind of desired gini coefficient
+alpha <- 1
+
 returndf <- lapply(scenarios,function(this_scenario) {
   
   
-  #this_scenario <- 'normal'
+  #this_scenario <- 'class_off'
   
   # Race -> Class
   #----------------------
-  p_black       = 0.15 # proportion of black population
-  p_class_black = c(18.95, 66.30, 12.63, 2.11)/100
-  p_class_white = c(12.13, 59.46, 23.75, 4.65)/100
-  
   if ( this_scenario %in% c('indirect_off','both_off') ) { 
     #eliminate race->class
-    p_class_black = p_class_white 
+    p_class_black <- p_class_white <- p_class
   }
   
-  p_class_black = p_class_black / sum(p_class_black )
-  p_class_white = p_class_white / sum(p_class_white )
-  
-  
-  # Race, Class -> Outcome
+  # Race --> Outcome
   #----------------------
-  y_class_black_median = c(3500, 33000, 60000, 35950)
-  y_class_white_median = c(8300, 49000, 80000, 66000)
-  
-  y_class_black_mean = c(13144, 41843, 76287, 62900)
-  y_class_white_mean = c(25293, 63433, 112858, 119976)
   
   if (this_scenario %in% c('direct_off', 'both_off') ) {
     #eliminate race->outcome
-    y_class_black_median = y_class_white_median 
-    y_class_black_mean   = y_class_white_mean
+    y_class_black_mean <- y_class_white_mean <- y_class_mean
+    y_class_black_median <- y_class_white_median <- y_class_mean * ratio_median2mean_class
   }
+  
+  # Class --> Outcome
+  #----------------------
   
   if (this_scenario == 'class_off') {
     #eliminate class->outcome
-    y_class_black_median = c(27623, 27623, 27623, 27623)
-    y_class_white_median = c(48518, 48518, 48518, 48518)
-    y_class_black_mean   = 1.29455102*y_class_black_median
-    y_class_white_mean   = 1.29455102*y_class_white_median    
+    
+    #converge means
+    y_class_black_mean   = alpha*y_black_mean + (1-alpha)*y_class_black_mean
+    y_class_white_mean   = alpha*y_white_mean + (1-alpha)*y_class_white_mean
+    
+    #converge dispersions
+    y_class_black_median = y_class_black_mean * (
+      alpha*max(ratio_median2mean_class) + 
+        (1-alpha)*ratio_median2mean_class_black
+    ) 
+    y_class_white_median = y_class_white_mean * (
+      alpha*max(ratio_median2mean_class) + 
+        (1-alpha)*ratio_median2mean_class_white
+    ) 
+    
   }
   
   # Fixed parameters
@@ -95,8 +135,7 @@ returndf <- lapply(scenarios,function(this_scenario) {
   n_black = as.integer( round(p_black * n) )
   n_white = n - n_black
   
-  
-  mu_class_black = log( y_class_black_median )
+  mu_class_black = log( y_class_black_median ) #anchored in median?
   mu_class_white = log( y_class_white_median )
   
   s_class_black = sqrt(  2 * (y_class_black_mean/y_class_black_median) ) #CHECK
@@ -147,7 +186,7 @@ returndf <- lapply(scenarios,function(this_scenario) {
     df$income_q_race<-100 * tmpf(df$income)
     df
   }) %>% rbind.fill %>% data.table
-
+  
   returndf
   
 }) %>% rbind.fill
