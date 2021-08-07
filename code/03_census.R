@@ -227,13 +227,21 @@ thisdf[ classwkrd==14, class_f:= 4 ]
 
 tmptable<-questionr::wtd.table(
   thisdf$class_f,
-  weights=thisdf$perwt
+  weights=thisdf$weight_f
 )
 100 * tmptable/sum(tmptable)
 #13% reserve-army/unemployed
-#54% w-class
-#30% professionals/self-employed
-#4% capitalists
+#59.6% w-class
+#23% professionals/self-employed
+#3.5% capitalists
+
+tmptable<-questionr::wtd.table(
+  thisdf$class_f,
+  thisdf$race_f,
+  weights=thisdf$weight_f
+)
+100 * tmptable/apply(tmptable,1,sum)
+
 
 
 # natincome<-weighted.mean(thisdf$inctot/1000,thisdf$perwt)
@@ -256,6 +264,15 @@ tmptable<-questionr::wtd.table(
   weights=incomedf$perwt
 )
 100 * tmptable/sum(tmptable)
+
+#race by class
+tmptable<-questionr::wtd.table(
+  x=incomedf$class_f,
+  y=incomedf$race_f,
+  weights=incomedf$weight_f
+)
+100 * tmptable/apply(tmptable,1,sum)
+
 
 #########################################################
 #########################################################

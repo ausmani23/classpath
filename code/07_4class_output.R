@@ -180,8 +180,9 @@ plotdf <- spread(
 )
 
 #calculate welfare cgain
-plotdf$welfare_gain <- log(plotdf$both_off) - log(plotdf$class_off)
-
+plotdf$net_chg <- log(plotdf$both_off) - log(plotdf$class_off)
+plotdf$class_chg <- log(plotdf$class_off) - log(plotdf$normal)
+plotdf$race_chg <- log(plotdf$both_off) - log(plotdf$normal)
 # plotdf$class <- factor(
 #   plotdf$class,
 #   levels=c(1,2,3,4),
@@ -192,6 +193,22 @@ plotdf$welfare_gain <- log(plotdf$both_off) - log(plotdf$class_off)
 #     'Capitalists'
 #   )
 # )
+tmpvars<-c(
+  'race',
+  'income_q',
+  'net_chg',
+  'class_chg',
+  'race_chg'
+)
+
+plotdf<-plotdf[,tmpvars,with=F]
+
+plotdf <- gather(
+  plotdf,
+  counterfactual,
+  gain,
+  net_chg:race_chg
+) %>% data.table
 
 plotdf$race<-factor(
   plotdf$race,
@@ -202,12 +219,27 @@ tmpcolors<-c(
   'Black'='Blue'
 )
 
+tmplevels<-c(
+  'race_chg',
+  'class_chg',
+  'net_chg'
+)
+tmplabels<-c(
+  "Race-Based Interventions",
+  "Class-Based Intervention",
+  "Comparison of the Two"
+)
+plotdf$counterfactual <- factor(
+  plotdf$counterfactual,
+  tmplevels,
+  tmplabels
+)
 
 g.tmp <- ggplot(
   plotdf,
   aes(
     x=income_q,
-    y=welfare_gain,
+    y=gain,
     group=race,
     color=race
   )
@@ -223,11 +255,11 @@ g.tmp <- ggplot(
     name="",
     values=tmpcolors
   ) +
-  # facet_wrap(
-  #   ~ class
-  # ) +
+  facet_wrap(
+    ~ counterfactual
+  ) +
   ylab(
-    'Welfare Gain (Race Paths Off vs. Class Path Off)\n'
+    'Welfare Gain\n'
   ) +
   xlab(
     '\nWithin-Race Income Percentile'
@@ -237,7 +269,7 @@ g.tmp <- ggplot(
 setwd(outputdir)
 ggsave(
   plot=g.tmp, 
-  filename="fig_4class_counterfactual.png",
+  filename="fig_4class_counterfactuals.png",
   width=8,
   height=6
 )
