@@ -60,7 +60,7 @@ genfw(c(1,4))
 
 #load codebook
 setwd(datadir); dir()
-tmpfname<-"usa_00036.cbk"
+tmpfname<-"usa_00038.cbk"
 tmp<-readLines(tmpfname)
 
 stline <- str_detect(tmp,"Variable") %>% which %>% min + 1
@@ -147,22 +147,31 @@ blackcodes<-c(801,830:845)
 # if(tmp>0)
 #   stop()
 thisdf[ , race_f := 4] #make everyone other
-thisdf[ race==1 & hispan==0, race_f := 1] #whites
-thisdf[ (race==2 | raced%in%blackcodes) & hispan==0, race_f := 2] #blacks
-thisdf[ hispan != 0, race_f := 3] #hispanics
+thisdf[ race==1 & hispan==0, race_f := 1] #whites, non-hispanics
+thisdf[ (race==2 | raced%in%blackcodes) & hispan==0, race_f := 2] #blacks, non-hisapnics
+thisdf[ hispan != 0, race_f := 3] #hispanics, all races
 #tmptab<-table( df$race_f, useNA="always" )
 #100 * tmptab/sum(tmptab) 
+
+#add a majority-minority measure of race
+thisdf[ , race_m := 1]
+thisdf[ race_f%in%c(2,3,4), race_m:= 2]
+
 
 #income
 thisdf[ inctot==9999999 , inctot := NA]
 thisdf[ incwage==9999999, incwage := NA]
 thisdf[ incbus00==9999999, incbus00 :=NA]
+thisdf[ incinvst==9999999, incinvst :=NA]
 #bottom-code..
 thisdf[, inctot_f := inctot]
 thisdf[, incwage_f := incwage]
+thisdf[, incinvest_f := incinvst]
+
 bottomcode<-1000
 thisdf[ inctot_f<bottomcode, inctot_f := bottomcode ]
 thisdf[ incwage_f<bottomcode, incwage_f := bottomcode]
+thisdf[ incinvest_f<bottomcode, incinvest_f := bottomcode]
 
 #rank occupations by education closure
 
@@ -222,46 +231,57 @@ thisdf[ empstat==1 & classwkr==2 & skillclass%in%c(2,3,4), class_f :=2 ]
 #skilled worker or self-employed
 thisdf[ empstat==1 & classwkr==2 & skillclass==1 , class_f:= 3]
 thisdf[ empstat==1 & classwkr==1, class_f :=3 ]
-#capitalist (anyone who is incorporated self-employed)
+#capitalist (anyone who is incorporated self-employed
+#or who makes maj of income from investment and significant income)
 thisdf[ classwkrd==14, class_f:= 4 ]
-
-tmptable<-questionr::wtd.table(
-  thisdf$class_f,
-  weights=thisdf$weight_f
-)
-100 * tmptable/sum(tmptable)
-#13% reserve-army/unemployed
-#59.6% w-class
-#23% professionals/self-employed
-#3.5% capitalists
-
-tmptable<-questionr::wtd.table(
-  thisdf$class_f,
-  thisdf$race_f,
-  weights=thisdf$weight_f
-)
-100 * tmptable/apply(tmptable,1,sum)
+thisdf[ incinvest_f/inctot_f > 0.5 & incinvest_f>10^4, class_f := 4]
 
 
 
-# natincome<-weighted.mean(thisdf$inctot/1000,thisdf$perwt)
-# capincome<-weighted.mean(thisdf$incbus00/1000,thisdf$perwt)
-# wageincome<-weighted.mean(thisdf$incwage/1000,thisdf$perwt)
-# 
-# capincome/natincome
-# wageincome/natincome
-
-#subset to working-age men
+#subset to black and white working-age men
 incomedf <-  thisdf[
   ageg_f%in%c(3,4,5,6) & 
     race_f%in%c(1,2) & 
     sex_f==1,
 ]
 
+overall_median <- weighted.median(incomedf$inctot_f,incomedf$weight_f)
+white_median <- weighted.median(
+  incomedf$inctot_f[incomedf$race_m==1],
+  incomedf$weight_f[incomedf$race_m==1]
+  ) #wh
+black_median <- weighted.median(
+  incomedf$inctot_f[incomedf$race_m==2],
+  incomedf$weight_f[incomedf$race_m==2]
+) #black incomes
+(white_median - black_median)/white_median
+
+
+tmptable<-questionr::wtd.table(
+  incomedf$class_f,
+  weights=incomedf$weight_f
+)
+100 * tmptable/sum(tmptable)
+
+tmptable<-questionr::wtd.table(
+  incomedf$class_f,
+  incomedf$race_f,
+  weights=incomedf$weight_f
+)
+100 * tmptable/apply(tmptable,1,sum)
+100 * tmptable[,1]/sum(tmptable[,1]) #whites by class
+100 * tmptable[,2]/sum(tmptable[,2]) #nonwhites by class
+
+
+tmpdf<-incomedf[,sum(weight_f),by=c('race_f')]
+whitepop <- 100 - 100 * tmpdf$V1[tmpdf$race_f==2]/sum(tmpdf$V1)
+setwd(outputdir)
+write(whitepop,"siminfo_whitepop.txt")
+
 #weighted race table
 tmptable<-questionr::wtd.table(
   incomedf$race_f,
-  weights=incomedf$perwt
+  weights=incomedf$weight_f
 )
 100 * tmptable/sum(tmptable)
 
