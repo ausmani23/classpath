@@ -236,8 +236,6 @@ thisdf[ empstat==1 & classwkr==1, class_f :=3 ]
 thisdf[ classwkrd==14, class_f:= 4 ]
 thisdf[ incinvest_f/inctot_f > 0.5 & incinvest_f>10^4, class_f := 4]
 
-
-
 #subset to black and white working-age men
 incomedf <-  thisdf[
   ageg_f%in%c(3,4,5,6) & 

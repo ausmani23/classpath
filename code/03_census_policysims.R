@@ -16,6 +16,7 @@ require(ggplot2)
 
 #for weighted ecdf
 require(spatstat)
+require(DescTools)
 
 #set dirs
 homedir<-find_root(
@@ -39,7 +40,6 @@ incomedf<-fread(
   'censusdf.csv'
 )
 bottomcode<-min(incomedf$inctot_f)
-
 
 #########################################################
 #########################################################
@@ -167,9 +167,14 @@ incdf[,welfare_redistribution := log(income_redistribution) - log(income)]
 
 #gini before, after
 #require(DescTools)
-Gini(incdf$income) #0.51
+Gini(incdf$income) #0.516
 Gini(incdf$income_reparations) #0.48
-Gini(incdf$income_redistribution) #0.26
+Gini(incdf$income_redistribution) #0.258 (exactly half)
+
+#racial gap before, after
+median(incdf[race==1,income]) - median(incdf[race==2,income]) #$20,000
+median(incdf[race==1,income_reparations]) - median(incdf[race==2,income_reparations]) #-$111
+median(incdf[race==1,income_redistribution]) - median(incdf[race==2,income_redistribution]) #$10,000
 
 #########################################################
 #########################################################
@@ -201,13 +206,35 @@ sumdf<-gather(
   scenario,
   welfare,
   welfare_redistribution:welfare_comparison
-)
+) %>% data.table
 sumdf$scenario<-str_replace(sumdf$scenario,"welfare\\_","")
 
+#########################################################
+#########################################################
+
+#PLOT PREP
+
+#b/c of bottom-coding in data and manually, 
+#the bottom X% are shown in one point at the plot (at X)
+#for visual reasons, we will want a horizontal line..
+extradf<-expand.grid(
+  income_q_race=0,
+  scenario=unique(sumdf$scenario),
+  race=unique(sumdf$race),
+  stringsAsFactors=F
+)
+sumdf<-rbind.fill(
+  extradf,
+  sumdf
+) %>% data.table
+setorder(sumdf,scenario,race,-income_q_race)
+sumdf$welfare<-na.locf(sumdf$welfare)
+
+#generate factors
 sumdf$scenario <- factor(
   sumdf$scenario,
   levels=c('reparations','redistribution','comparison'),
-  labels=c('Reparations','Redistribution','Net Comparison')
+  labels=c('Reparations','Redistribution','Reparations vs. Redistribution')
 )
 
 sumdf$race<-factor(
@@ -220,219 +247,306 @@ tmpcolors<-c(
   'Blacks'='Blue'
 )
 
-g.tmp<-ggplot(
-  sumdf,
-  aes(
-    x=income_q_race,
-    y=welfare,
-    color=race,
-    group=race
-  )
-) +
-  geom_line(
-    size=1
-  ) +
-  geom_hline(
-    yintercept=0,
-    linetype='dashed'
-  ) +
-  scale_color_manual(
-    name="",
-    values=tmpcolors
-  ) +
-  xlab("\nWithin-Race Income Rank (Percentile)") +
-  ylab("+ implies support, - implies oppose") +
-  facet_wrap(
-    ~ scenario,
-    ncol=1
-  ) + 
-  theme_bw() + 
-  theme(
-    legend.position = 'top',
-    legend.direction = 'horizontal'
-  )
-
-setwd(outputdir)
-ggsave(
-  plot=g.tmp,
-  filename="fig_policy_counterfactuals.png",
-  width=5,
-  height=10
-)
 
 #########################################################
 #########################################################
 
-#ADD RACE/CLASS
+#THREE SEPARATE PLOTS
 
-popdf<-merge(
-  incdf[,.(num=.N),by=c('race','class')],
-  incdf[,.(denom=.N),by=c('class')]
-  )
-popdf$pct <- round(100 * popdf$num/popdf$denom)
-popdf$num <- popdf$denom <- NULL
-popdf <- by(popdf,popdf$class,function(df) {
-  #df<-popdf[class==1,]
-  tmpdf<-data.frame(
-    race=c(rep(2,df$pct[df$race==2]),rep(1,df$pct[df$race==1]))
-  )
-  tmpdf$row<-1:nrow(tmpdf)
-  tmpdf$class<-unique(df$class)
-  tmpdf
-}) %>% rbind.fill %>% data.table
-tmpdf<-expand.grid(
-  x=1:10,
-  y=1:10
-)
-tmpdf$row <- 1:nrow(tmpdf)
-popdf<-merge(popdf,tmpdf) %>% data.table
-
-#loop through this and summarize this in
-#X bits, where X is the share of the class in this race
-sumdf <- by(incdf,list(incdf$race,incdf$class),function(df) {
+for (mylevel in levels(sumdf$scenario)) {
   
-  #df <- incdf[incdf$race==1 & incdf$class==1,]
-  print(unique(df$race))
-  print(unique(df$class))
+  #mylevel <- levels(sumdf$scenario)[3]
+  myfilename <- paste0(str_extract_all(mylevel,"[A-z]+")[[1]],collapse="") %>% 
+    tolower
   
-  #how many numbers do i have to summarize this?
-  tmp<-popdf$race==unique(df$race) & popdf$class==unique(df$class)
-  members_class<-sum(tmp)
-  tmpseq<-c(1:100)/100
-  #tmpseq[tmpseq==1]<-0.99 #b/c of crazy tails
-  rows<-popdf$row[tmp]
-  #use the median of every group to summarize
-  tmpseq<-sapply(split(tmpseq,cut(tmpseq,members_class)),median)
-  tmpdf<-incdf[
-    race==unique(df$race) & class==unique(df$class)
-    ,
-    .(
-      race=unique(df$race),
-      class=unique(df$class),
-      income_q = 100 * tmpseq,
-      income = quantile(income,tmpseq) %>% unname,
-      income_redistribution = quantile(income_redistribution,tmpseq) %>% unname,
-      income_reparations = quantile(income_reparations,tmpseq) %>% unname,
-      row = rows
+  if(mylevel=="Reparations vs. Redistribution") {
+    mylabels<-c(
+      "Strongly Prefer Redistribution",
+      "Prefer Redistribution",
+      "Neutral",
+      "Prefer Reparations",
+      "Strongly Prefer Reparations"
     )
-  ]
+  } else {
+    mylabels<-c(
+      "Strongly Oppose",
+      "Oppose",
+      "Neutral",
+      "Support",
+      "Strongly Support"
+      )
+  }
   
-}) %>% rbind.fill %>% data.table
+  g.tmp<-ggplot(
+    sumdf[scenario==mylevel],
+    aes(
+      x=income_q_race,
+      y=welfare,
+      color=race,
+      group=race
+    )
+  ) +
+    geom_line(
+      size=1
+    ) +
+    geom_hline(
+      yintercept=0,
+      linetype='dashed'
+    ) +
+    scale_color_manual(
+      name="",
+      values=tmpcolors
+    ) +
+    xlab("\nWithin-Race Income Rank") +
+    ylab("") +
+    #bound it by max/min of welfare
+    scale_y_continuous(
+      breaks=c(-3.55,-1.775,0,1.775,3.55),
+      labels=mylabels,
+      limits=c(-3.55,3.55)
+      ) + 
+    facet_wrap(
+      ~ scenario,
+      ncol=1
+    ) + 
+    theme_bw() + 
+    theme(
+      legend.position = 'top',
+      legend.direction = 'horizontal'
+    )
+  
+  setwd(outputdir)
+  ggsave(
+    plot=g.tmp,
+    filename=paste0("fig_",myfilename,".png"),
+    width=6,
+    height=4
+  )
+  
+  
+}
 
-plotdf <- merge(
-  sumdf,
-  popdf,
-  by=c('race','class','row')
-)
+#########################################################
+#########################################################
 
-# plotdf <- spread(
-#   plotdf,
-#   scenario,
-#   income
+#DEPRECATED
+
+# #SINGLE PLOT
+# 
+# g.tmp<-ggplot(
+#   sumdf,
+#   aes(
+#     x=income_q_race,
+#     y=welfare,
+#     color=race,
+#     group=race
+#   )
+# ) +
+#   geom_line(
+#     size=1
+#   ) +
+#   geom_hline(
+#     yintercept=0,
+#     linetype='dashed'
+#   ) +
+#   scale_color_manual(
+#     name="",
+#     values=tmpcolors
+#   ) +
+#   xlab("\nWithin-Race Income Rank (Percentile)") +
+#   ylab("+ implies support, - implies oppose") +
+#   facet_wrap(
+#     ~ scenario,
+#     ncol=1
+#   ) + 
+#   theme_bw() + 
+#   theme(
+#     legend.position = 'top',
+#     legend.direction = 'horizontal'
+#   )
+# 
+# setwd(outputdir)
+# ggsave(
+#   plot=g.tmp,
+#   filename="fig_policy_counterfactuals.png",
+#   width=5,
+#   height=10
 # )
-plotdf$net_chg <- log(plotdf$income_reparations) - log(plotdf$income_redistribution)
-plotdf$redistribution_chg <- log(plotdf$income_redistribution) - log(plotdf$income)
-plotdf$reparations_chg <- log(plotdf$income_reparations) - log(plotdf$income)
 
-tmpvars<-c(
-  'x',
-  'y',
-  'race',
-  'class',
-  'income_q',
-  'net_chg',
-  'redistribution_chg',
-  'reparations_chg'
-)
-plotdf<-plotdf[,tmpvars,with=F]
+#########################################################
+#########################################################
 
-plotdf <- gather(
-  plotdf,
-  counterfactual,
-  gain,
-  net_chg:reparations_chg
-) %>% data.table
-
-plotdf$support <- plotdf$gain>0
-plotdf$shape[plotdf$race==1]<-"w"
-plotdf$shape[!plotdf$race==1]<-"b"
-
-
-plotdf$support<-factor(
-  plotdf$support,
-  levels=c(T,F),
-  labels=c('Support','Oppose')
-)
-tmpcolors<-c(
-  'Support'='darkgreen',
-  'Oppose'='white'
-)
-
-
-tmplevels<-c(
-  'reparations_chg',
-  'redistribution_chg',
-  'net_chg'
-)
-tmplabels<-c(
-  "Reparations",
-  "Redistribution",
-  "Net Preference"
-)
-plotdf$counterfactual <- factor(
-  plotdf$counterfactual,
-  tmplevels,
-  tmplabels
-)
-
-plotdf$class <- factor(
-  plotdf$class,
-  levels=c(1,2,3,4),
-  labels=c(
-    'Reserve Army',
-    'Working-Class',
-    'Professionals',
-    'Capitalists'
-  )
-)
-
-
-g.tmp <- ggplot(
-  plotdf,
-  aes(
-    x=x,
-    y=y,
-    fill=support,
-    label=shape
-  )
-) +
-  geom_tile() +
-  geom_text(
-    size=2
-  ) +
-  scale_fill_manual(
-    name="",
-    values=tmpcolors
-  ) +
-  facet_grid(
-    class ~ counterfactual
-  ) +
-  xlab("") +
-  ylab("") +
-  theme_bw() +
-  theme(
-    panel.grid = element_blank(),
-    axis.text = element_blank(),
-    axis.ticks = element_blank()
-  )
-
-setwd(outputdir)
-ggsave(
-  plot=g.tmp, 
-  filename="fig_policy_counterfactual_support_byclass.png",
-  width=8,
-  height=6
-)
+#DEPRECATED
+# #ADD RACE/CLASS
+# 
+# popdf<-merge(
+#   incdf[,.(num=.N),by=c('race','class')],
+#   incdf[,.(denom=.N),by=c('class')]
+#   )
+# popdf$pct <- round(100 * popdf$num/popdf$denom)
+# popdf$num <- popdf$denom <- NULL
+# popdf <- by(popdf,popdf$class,function(df) {
+#   #df<-popdf[class==1,]
+#   tmpdf<-data.frame(
+#     race=c(rep(2,df$pct[df$race==2]),rep(1,df$pct[df$race==1]))
+#   )
+#   tmpdf$row<-1:nrow(tmpdf)
+#   tmpdf$class<-unique(df$class)
+#   tmpdf
+# }) %>% rbind.fill %>% data.table
+# tmpdf<-expand.grid(
+#   x=1:10,
+#   y=1:10
+# )
+# tmpdf$row <- 1:nrow(tmpdf)
+# popdf<-merge(popdf,tmpdf) %>% data.table
+# 
+# #loop through this and summarize this in
+# #X bits, where X is the share of the class in this race
+# sumdf <- by(incdf,list(incdf$race,incdf$class),function(df) {
+#   
+#   #df <- incdf[incdf$race==1 & incdf$class==1,]
+#   print(unique(df$race))
+#   print(unique(df$class))
+#   
+#   #how many numbers do i have to summarize this?
+#   tmp<-popdf$race==unique(df$race) & popdf$class==unique(df$class)
+#   members_class<-sum(tmp)
+#   tmpseq<-c(1:100)/100
+#   #tmpseq[tmpseq==1]<-0.99 #b/c of crazy tails
+#   rows<-popdf$row[tmp]
+#   #use the median of every group to summarize
+#   tmpseq<-sapply(split(tmpseq,cut(tmpseq,members_class)),median)
+#   tmpdf<-incdf[
+#     race==unique(df$race) & class==unique(df$class)
+#     ,
+#     .(
+#       race=unique(df$race),
+#       class=unique(df$class),
+#       income_q = 100 * tmpseq,
+#       income = quantile(income,tmpseq) %>% unname,
+#       income_redistribution = quantile(income_redistribution,tmpseq) %>% unname,
+#       income_reparations = quantile(income_reparations,tmpseq) %>% unname,
+#       row = rows
+#     )
+#   ]
+#   
+# }) %>% rbind.fill %>% data.table
+# 
+# plotdf <- merge(
+#   sumdf,
+#   popdf,
+#   by=c('race','class','row')
+# )
+# 
+# # plotdf <- spread(
+# #   plotdf,
+# #   scenario,
+# #   income
+# # )
+# plotdf$net_chg <- log(plotdf$income_reparations) - log(plotdf$income_redistribution)
+# plotdf$redistribution_chg <- log(plotdf$income_redistribution) - log(plotdf$income)
+# plotdf$reparations_chg <- log(plotdf$income_reparations) - log(plotdf$income)
+# 
+# tmpvars<-c(
+#   'x',
+#   'y',
+#   'race',
+#   'class',
+#   'income_q',
+#   'net_chg',
+#   'redistribution_chg',
+#   'reparations_chg'
+# )
+# plotdf<-plotdf[,tmpvars,with=F]
+# 
+# plotdf <- gather(
+#   plotdf,
+#   counterfactual,
+#   gain,
+#   net_chg:reparations_chg
+# ) %>% data.table
+# 
+# plotdf$support <- plotdf$gain>0
+# plotdf$shape[plotdf$race==1]<-"w"
+# plotdf$shape[!plotdf$race==1]<-"b"
+# 
+# 
+# plotdf$support<-factor(
+#   plotdf$support,
+#   levels=c(T,F),
+#   labels=c('Support','Oppose')
+# )
+# tmpcolors<-c(
+#   'Support'='darkgreen',
+#   'Oppose'='white'
+# )
+# 
+# 
+# tmplevels<-c(
+#   'reparations_chg',
+#   'redistribution_chg',
+#   'net_chg'
+# )
+# tmplabels<-c(
+#   "Reparations",
+#   "Redistribution",
+#   "Net Preference"
+# )
+# plotdf$counterfactual <- factor(
+#   plotdf$counterfactual,
+#   tmplevels,
+#   tmplabels
+# )
+# 
+# plotdf$class <- factor(
+#   plotdf$class,
+#   levels=c(1,2,3,4),
+#   labels=c(
+#     'Reserve Army',
+#     'Working-Class',
+#     'Professionals',
+#     'Capitalists'
+#   )
+# )
+# 
+# 
+# g.tmp <- ggplot(
+#   plotdf,
+#   aes(
+#     x=x,
+#     y=y,
+#     fill=support,
+#     label=shape
+#   )
+# ) +
+#   geom_tile() +
+#   geom_text(
+#     size=2
+#   ) +
+#   scale_fill_manual(
+#     name="",
+#     values=tmpcolors
+#   ) +
+#   facet_grid(
+#     class ~ counterfactual
+#   ) +
+#   xlab("") +
+#   ylab("") +
+#   theme_bw() +
+#   theme(
+#     panel.grid = element_blank(),
+#     axis.text = element_blank(),
+#     axis.ticks = element_blank()
+#   )
+# 
+# setwd(outputdir)
+# ggsave(
+#   plot=g.tmp, 
+#   filename="fig_policy_counterfactual_support_byclass.png",
+#   width=8,
+#   height=6
+# )
 
 
 

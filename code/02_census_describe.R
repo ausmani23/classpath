@@ -185,16 +185,18 @@ tmpdf<-by(plotdf,plotdf$race_m,function(tmpdf) {
 }) %>% rbind.fill
 gapdf<-tmpdf
 
-#gap in % terms
-(gapdf$income[gapdf$race_m=="White"] - gapdf$income[gapdf$race_m=="Black"])/
-  gapdf$income[gapdf$race_m=="White"]
-
 #illustrate rich and poor blacks
 tmpdf2<-plotdf[race_m=='Black' & income_q%in%c(15,85)]
 
-#gap in % terms
-(tmpdf2$income[tmpdf2$income_q==85] - tmpdf2$income[tmpdf2$income_q==15])/
-  tmpdf2$income[tmpdf2$income_q==85]
+#white-black gap in % terms
+num_wb<-gapdf$income[gapdf$race_m=="White"] - gapdf$income[gapdf$race_m=="Black"]
+denom_wb<-gapdf$income[gapdf$race_m=="White"]
+
+#black-black gap in % terms
+num_bb<-tmpdf2$income[tmpdf2$income_q==85] - tmpdf2$income[tmpdf2$income_q==15]
+denom_bb<-tmpdf2$income[tmpdf2$income_q==85]
+
+num_bb/num_wb
 
 
 #make the graph
