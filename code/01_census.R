@@ -236,6 +236,19 @@ thisdf[ empstat==1 & classwkr==1, class_f :=3 ]
 thisdf[ classwkrd==14, class_f:= 4 ]
 thisdf[ incinvest_f/inctot_f > 0.5 & incinvest_f>10^4, class_f := 4]
 
+#strategically positioned workers? 
+#https://usa.ipums.org/usa/volii/ind2017.shtml
+#construction (770)
+#manufacturing (1070-3990)
+#transportation and warehousing (6070-6390)
+thisdf$strategic_f <- 0
+thisdf[ ind==770, strategic_f := 1] #construction
+thisdf[ ind%in%c(1070:3990), strategic_f := 2] #manufacturing
+thisdf[ ind%in%c(6070:6390), strategic_f := 3] #trucking and transport
+
+#########################################################
+#########################################################
+
 #subset to black and white working-age men
 incomedf <-  thisdf[
   ageg_f%in%c(3,4,5,6) & 
@@ -247,7 +260,7 @@ overall_median <- weighted.median(incomedf$inctot_f,incomedf$weight_f)
 white_median <- weighted.median(
   incomedf$inctot_f[incomedf$race_m==1],
   incomedf$weight_f[incomedf$race_m==1]
-  ) #wh
+) #wh
 black_median <- weighted.median(
   incomedf$inctot_f[incomedf$race_m==2],
   incomedf$weight_f[incomedf$race_m==2]
@@ -270,7 +283,7 @@ tmptable<-questionr::wtd.table(
 100 * tmptable[,1]/sum(tmptable[,1]) #whites by class
 100 * tmptable[,2]/sum(tmptable[,2]) #nonwhites by class
 
-
+#output siminfo
 tmpdf<-incomedf[,sum(weight_f),by=c('race_f')]
 whitepop <- 100 - 100 * tmpdf$V1[tmpdf$race_f==2]/sum(tmpdf$V1)
 setwd(outputdir)
@@ -281,7 +294,7 @@ tmptable<-questionr::wtd.table(
   incomedf$race_f,
   weights=incomedf$weight_f
 )
-100 * tmptable/sum(tmptable)
+print(100 * tmptable/sum(tmptable))
 
 #race by class
 tmptable<-questionr::wtd.table(
@@ -289,8 +302,40 @@ tmptable<-questionr::wtd.table(
   y=incomedf$race_f,
   weights=incomedf$weight_f
 )
-100 * tmptable/apply(tmptable,1,sum)
+print(100 * tmptable/apply(tmptable,1,sum))
 
+#race by strategic sector, workers only
+tmpdf<-incomedf[class_f==2]
+tmptable<-questionr::wtd.table(
+  x=tmpdf$strategic_f==0,
+  y=tmpdf$race_f,
+  weights=tmpdf$weight_f
+)
+print(100 * tmptable/apply(tmptable,1,sum))
+#as a whole
+
+tmptable<-questionr::wtd.table(
+  x=tmpdf$strategic_f,
+  y=tmpdf$race_f,
+  weights=tmpdf$weight_f
+)
+print(100 * tmptable/apply(tmptable,1,sum))
+#broken down
+
+#what is up with transport?
+transportdf<-tmpdf[
+  ind%in%c(6070:6390),
+  .(
+    black=sum(weight_f[race_f==2]),
+    white=sum(weight_f[race_f==1])
+  ),
+  by=c('ind')
+]
+transportdf$black<-transportdf$black/apply(transportdf,1,sum)
+transportdf$white<-transportdf$white/apply(transportdf,1,sum)
+transportdf[order(transportdf$black),]
+#overrepresented, within transprot, in least strateig industries
+#(though we are probably strating to stretch limits of ACS sample)
 
 #########################################################
 #########################################################

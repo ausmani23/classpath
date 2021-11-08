@@ -196,8 +196,8 @@ denom_wb<-gapdf$income[gapdf$race_m=="White"]
 num_bb<-tmpdf2$income[tmpdf2$income_q==85] - tmpdf2$income[tmpdf2$income_q==15]
 denom_bb<-tmpdf2$income[tmpdf2$income_q==85]
 
+#withinrace/cross-race difference
 num_bb/num_wb
-
 
 #make the graph
 g.tmp <- ggplot(
@@ -221,22 +221,43 @@ g.tmp <- ggplot(
     color='grey',
     size=4
   ) +
-  geom_line(
-    data=tmpdf,
-    linetype='solid',
-    color='black',
-    size=1
+  annotate(
+    "text",
+    x=tmpdf$income_q[tmpdf$race_m=='Black'] - 2.5,
+    y=tmpdf$income[tmpdf$race_m=='Black'] + 500,
+    label='A',
+    size=7.5
   ) +
+  annotate(
+    "text",
+    x=tmpdf$income_q[tmpdf$race_m=='White'] - 2.5,
+    y=tmpdf$income[tmpdf$race_m=='White'] + 2500,
+    label='B',
+    size=7.5
+  ) +
+  # geom_line(
+  #   data=tmpdf,
+  #   linetype='solid',
+  #   color='black',
+  #   size=1
+  # ) +
   #highlight 10th,90th percentile black
   geom_point(
     data=tmpdf2,
     color='grey',
     size=4
   ) +
-  geom_hline(
-    yintercept=tmpdf2$income,
-    linetype='dashed'
+  annotate(
+    "text",
+    x=tmpdf2$income_q[tmpdf2$income_q==85],
+    y=tmpdf2$income[tmpdf2$income_q==85] - 20000,
+    label='C',
+    size=7.5
   ) +
+  # geom_hline(
+  #   yintercept=tmpdf2$income,
+  #   linetype='dashed'
+  # ) +
   #this governs the tick marks
   scale_y_log10(
     breaks = 10^(3:6),
