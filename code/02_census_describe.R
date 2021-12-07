@@ -31,6 +31,19 @@ datadir<-file.path(
   homedir,"data"
 )
 
+#quick function to outputdfs
+output <- function(df,tmpname) {
+  setwd(outputdir)
+  if( str_detect(tmpname,"\\.pdf$|\\.png$") ) 
+    tmpname<-str_replace(tmpname,"\\.pdf$|\\.png$",".csv")
+  write.csv(
+    df,
+    tmpname,
+    row.names=F
+  )
+}
+
+
 #########################################################
 #########################################################
 
@@ -126,11 +139,13 @@ g.tmp <- ggplot(
   ) + 
   theme_bw() +
   xlab("\nIncome Bin") +
-  ylab("Proportion\n")
+  ylab("Proportion\n") 
 
 setwd(outputdir)
+tmpname<-'fig_pmf.pdf'
+output(plotdf,tmpname)
 ggsave(
-  filename="fig_pmf.png",
+  filename=tmpname,
   plot=g.tmp,
   width=10,
   height=5
@@ -272,12 +287,22 @@ g.tmp <- ggplot(
   )
 
 setwd(outputdir)
+tmpname<-'fig_quantileplot.pdf'
+output(plotdf,tmpname)
 ggsave(
-  filename="fig_quantileplot.png",
+  filename=tmpname,
   plot=g.tmp,
   width=8,
   height=6
 )
+
+#also output extra points
+extradf<-rbind.fill(
+  tmpdf,
+  tmpdf2
+)
+setwd(outputdir)
+write.csv(extradf,'fig_quantileplot_extrapoints.csv',row.names=F)
 
 #########################################################
 #########################################################
@@ -354,8 +379,10 @@ g.tmp<-ggplot(
   )
 
 setwd(outputdir)
+tmpname<-'fig_proportions.pdf'
+output(plotdf,tmpname)
 ggsave(
-  filename="fig_proportions.png",
+  filename=tmpname,
   plot=g.tmp,
   width=8,
   height=4
@@ -467,8 +494,10 @@ g.tmp <- ggplot(
   )
 
 setwd(outputdir)
+tmpname<-'fig_quantileplot_class.pdf'
+output(plotdf,tmpname)
 ggsave(
-  filename="fig_quantileplot_class.png",
+  filename=tmpname,
   plot=g.tmp,
   width=8,
   height=6
@@ -585,7 +614,7 @@ ggsave(
 # 
 # setwd(outputdir)
 # ggsave(
-#   filename="fig_cdfs_raceXclass.png",
+#   filename="fig_cdfs_raceXclass.pdf",
 #   plot=g.tmp,
 #   width=8,
 #   height=6
@@ -661,7 +690,7 @@ ggsave(
 # 
 # setwd(outputdir)
 # ggsave(
-#   filename="fig_pdfs_raceXclass.png",
+#   filename="fig_pdfs_raceXclass.pdf",
 #   plot=g.tmp,
 #   width=8,
 #   height=6

@@ -32,6 +32,19 @@ datadir<-file.path(
   homedir,"data"
 )
 
+#quick function to outputdfs
+output <- function(df,tmpname) {
+  setwd(outputdir)
+  if( str_detect(tmpname,"\\.pdf$|\\.png$") ) 
+    tmpname<-str_replace(tmpname,"\\.pdf$|\\.png$",".csv")
+  write.csv(
+    df,
+    tmpname,
+    row.names=F
+  )
+}
+
+
 #########################################################
 #########################################################
 
@@ -40,6 +53,7 @@ incomedf<-fread(
   'censusdf.csv'
 )
 bottomcode<-min(incomedf$inctot_f)
+
 
 #########################################################
 #########################################################
@@ -87,21 +101,23 @@ incdf[
 #########################################################
 #########################################################
 
-#REPARATIONS
+#REPARATIONS (MEDIAN)
 
-# #median gap between blacks/whites
-# mwage_w <- incdf[race==1,median(income)]
-# mwage_b <- incdf[race==2,median(income)]
-# 
-# #we need to close this gap
-# mediangap <- mwage_w - mwage_b
-# wbratio <- nrow(incdf[race==1])/nrow(incdf[race==2])
-# 
-# #we take x/wbratio from whites to give x to blacks
-# #x + x/wbratio = mediangap
-# #solve for x
-# reparations_gain <- (mediangap * wbratio)/(1 + wbratio)
-# reparations_loss <- -1 * reparations_gain / wbratio
+#in this, we close the median gap
+
+#median gap between blacks/whites
+mwage_w <- incdf[race==1,median(income)]
+mwage_b <- incdf[race==2,median(income)]
+
+#we need to close this gap
+mediangap <- mwage_w - mwage_b
+wbratio <- nrow(incdf[race==1])/nrow(incdf[race==2])
+
+#we take x/wbratio from whites to give x to blacks
+#x + x/wbratio = mediangap
+#solve for x
+reparations_gain <- (mediangap * wbratio)/(1 + wbratio)
+reparations_loss <- -1 * reparations_gain / wbratio
 # print(reparations_gain); print(reparations_loss)
 # incdf[race==1, reparations_tax:=reparations_loss]
 # incdf[race==2, reparations_tax:=reparations_gain]
@@ -126,18 +142,87 @@ incdf[
 #########################################################
 #########################################################
 
-#REDISTRIBUTIVE REPARATIONS
+# #REPARATIONS (VARIABLE ACROSS GAP)
+# 
+# #in this, we close each gap
+# #to do this, we round within-race to the nearest 2.5th percentile
+# incdf[,income_q_race2 := floor(income_q_race/2.5)*2.5]
+# 
+# #put the white people in bottom groups
+# #in the same gruop as bottom-most black people
+# minrank <- min(incdf[,income_q_race2[race==2]])
+# incdf[race==1 & income_q_race2<=minrank,income_q_race2:=minrank]
+# 
+# #we calculate the racial gap in each group
+# incdf[
+#   ,
+#   meangap := mean(income[race==1]) - mean(income[race==2])
+#   ,
+#   by=c('income_q_race2')
+# ]
+# 
+# #now, we redistribute within each decile
+# #the amount sufficient to close that gap
+# incdf[
+#   ,
+#   wbratio := sum(race==1)/sum(race==2)
+#   ,
+#   by=c('income_q_race2')
+# ]
+# 
+# incdf[,reparations_tax := (meangap * wbratio)/(1 + wbratio)]
+# incdf[race==1,reparations_tax:= -1 * reparations_tax / wbratio]
+# # 
+# # #groups with no black people
+# # incdf[is.nan(reparations_tax),reparations_tax:=0] 
+# 
+# #check to make sure we are not taxing people 
+# #beyond amount that takes them to bottomcode
+# incdf[
+#   income + reparations_tax<bottomcode,
+#   reparations_tax := bottomcode - income
+# ]
+# incdf[,income_reparations := income + reparations_tax]
+# 
+# #check that the gaps are closed
+# gapdf<-incdf[,.(gap=mean(income_reparations)),by=c('race','income_q_race2')]
+# gapdf<-spread(gapdf,race,gap) 
+# gapdf$gap<-round(gapdf$`1`-gapdf$`2`)
+# gapdf
+# 
+# #check that the overall gap is closed
+# round(
+#   incdf[,mean(income_reparations[race==1])] -
+#   incdf[,mean(income_reparations[race==2])]
+# )
+# #yes, basically
+# 
+# #and is overall amount of money preserved?
+# round(
+#   incdf[,mean(income)] -
+#   incdf[,mean(income_reparations)]
+# )
+# #yes, basically
+# 
+# # #rank everyone by interest in this proposal
+# # #(i.e., what they gain in welfare) 
+# incdf[,welfare_reparations:=log(income_reparations)-log(income)]
+
+#########################################################
+#########################################################
+
+#REDISTRIBUTIVE REPARATIONS TO CLOSE MEDIAN
 
 #some people say reparations itself would be redistributive
 #so let's implement a redistributive tax (take x% from everyone)
-#and redistribute this to black people, specifically.. 
+#and redistribute this to black people, specifically..
 
 #implement progressive tax
-#we calibrate a taxrate so that this makes median incomes equal.. 
-incdf[, reparations2_taxrate := 1/100 * (income_q/16)] 
+#we calibrate a taxrate so that this makes median incomes equal..
+incdf[, reparations2_taxrate := 1/100 * (income_q/16)]
 incdf[, reparations2_tax := -1 * (income * reparations2_taxrate)]
 reparations2_gain <- sum(-1 * incdf$reparations2_tax)/sum(incdf$race==2)
-incdf[race==1, reparations2_transfer := 0] 
+incdf[race==1, reparations2_transfer := 0]
 incdf[race==2, reparations2_transfer := reparations2_gain]
 incdf[,income_reparations2 := income + reparations2_tax + reparations2_transfer]
 incdf[,welfare_reparations2 := log(income_reparations2) - log(income)]
@@ -145,6 +230,45 @@ incdf[,welfare_reparations2 := log(income_reparations2) - log(income)]
 #check that the median gap is closed?
 median(incdf$income_reparations2[incdf$race==1])
 median(incdf$income_reparations2[incdf$race==2])
+
+#what about gap at bottom/top?
+quantile(incdf$income_reparations2[incdf$race==1],0.15)
+quantile(incdf$income_reparations2[incdf$race==2],0.15)
+quantile(incdf$income_reparations2[incdf$race==1],0.85)
+quantile(incdf$income_reparations2[incdf$race==2],0.85)
+
+#what about mean gap?
+mean(incdf$income_reparations2[incdf$race==1]) -
+  mean(incdf$income_reparations2[incdf$race==2])
+mean(incdf$income[incdf$race==1]) -
+  mean(incdf$income[incdf$race==2])
+#went from about 30k to 10k
+#D+W propose to close this (see loc 5359), but this has some v strange implications
+#either it is distributed to blacks according to current income distribution,
+#inw hich case rich blacks are the big beneficiaries of reparations
+#or it is distributed in a more egalitarian wy, in which case
+#poor blacks would become substantially richer than poor whites,
+#transforming the black income distribution..
+#one seems implausbiel, the other is laughbly inegalitarian
+#we don't discuss this in the piece, but it raises an important point:
+#there is no one black-white gap which you might minimize..
+
+#these look funky; b/c gap varies,
+#flat amount does different things at different points
+
+#how is redistribution done
+quantile(
+  incdf$reparations2_transfer[incdf$race==2] +
+    incdf$reparations2_tax[incdf$race==2],
+  c(0,0.15,0.5,0.85,1)
+)
+
+#how poor is the poorest black person, post reparations
+minblackincome <- min(incdf[,income_reparations2[race==2]])
+min(incdf[race==1 & income_reparations2>minblackincome,income_q_race])
+min(incdf[race==1 & income_reparations2>minblackincome,income_q_race])
+#this is about the 20th percentile black person
+
 
 #use redistributive version of reparations
 incdf[,income_reparations := income_reparations2]
@@ -274,11 +398,13 @@ for (mylevel in levels(sumdf$scenario)) {
       "Neutral",
       "Support",
       "Strongly Support"
-      )
+    )
   }
   
+  plotdf<-sumdf[scenario==mylevel]
+  
   g.tmp<-ggplot(
-    sumdf[scenario==mylevel],
+    plotdf,
     aes(
       x=income_q_race,
       y=welfare,
@@ -304,7 +430,7 @@ for (mylevel in levels(sumdf$scenario)) {
       breaks=c(-3.55,-1.775,0,1.775,3.55),
       labels=mylabels,
       limits=c(-3.55,3.55)
-      ) + 
+    ) + 
     facet_wrap(
       ~ scenario,
       ncol=1
@@ -316,9 +442,11 @@ for (mylevel in levels(sumdf$scenario)) {
     )
   
   setwd(outputdir)
+  tmpname<-paste0("fig_",myfilename,".pdf")
+  output(plotdf,tmpname)
   ggsave(
     plot=g.tmp,
-    filename=paste0("fig_",myfilename,".png"),
+    filename=tmpname,
     width=6,
     height=4
   )
@@ -368,7 +496,7 @@ for (mylevel in levels(sumdf$scenario)) {
 # setwd(outputdir)
 # ggsave(
 #   plot=g.tmp,
-#   filename="fig_policy_counterfactuals.png",
+#   filename="fig_policy_counterfactuals.pdf",
 #   width=5,
 #   height=10
 # )
@@ -543,7 +671,7 @@ for (mylevel in levels(sumdf$scenario)) {
 # setwd(outputdir)
 # ggsave(
 #   plot=g.tmp, 
-#   filename="fig_policy_counterfactual_support_byclass.png",
+#   filename="fig_policy_counterfactual_support_byclass.pdf",
 #   width=8,
 #   height=6
 # )
@@ -646,7 +774,7 @@ for (mylevel in levels(sumdf$scenario)) {
 # setwd(outputdir)
 # ggsave(
 #   plot=g.tmp,
-#   filename="fig_welfarecomparison_table.png",
+#   filename="fig_welfarecomparison_table.pdf",
 #   width=8,
 #   height=3
 # )
